@@ -55,6 +55,7 @@ public class LeaveDayAPIDbContext :
     #endregion
 
     public DbSet<LeaveRequest> LeaveRequests { get; set; }
+    public DbSet<LeaveDay> LeaveDays  { get; set; }
 
     public LeaveDayAPIDbContext(DbContextOptions<LeaveDayAPIDbContext> options)
         : base(options)
@@ -89,6 +90,13 @@ public class LeaveDayAPIDbContext :
             lr.Property(x => x.EndDate) .IsRequired();
             lr.Property(x => x.ApproveStatus).IsRequired();
             lr.Property(x => x.UserId).IsRequired();
+        });
+
+        builder.Entity<LeaveDay>(ld =>
+        {
+            ld.ToTable("LeaveDays");
+            ld.Property(x => x.UserId).IsRequired();
+            ld.Property(x => x.RemainingDayNumber).IsRequired();
         });
     }
 }

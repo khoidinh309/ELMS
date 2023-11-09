@@ -13,7 +13,7 @@
     "User:NotFound": "User is not existing",
     "LeaveRequest:InValidDate": "Invalid date time, check the starting date that is not in the past for now or greater than the ending one",
     "LeaveRequest:NotFound": "Approved Request can not be updated, let create a new one",
-    "LeaveRequest:ApproveError" :  "Can not approve a request that has been rejected",
-
+    "LeaveRequest:ApproveError": "Can not approve a request that has been rejected",
+    "LeaveRequest:NotEnoughRemainingDay":  "Your remaining days is not enough, you only have {0} day(s)",
   }
 }

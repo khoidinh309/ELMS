@@ -10,6 +10,7 @@ namespace LeaveDayAPI.LeaveRequests
         Task<LeaveRequestDto> CreateAsync(CreateLeaveRequestDto leaveRequest);
         Task<LeaveRequestDto> UpdateAsync(UpdateLeaveRequestDto leaveRequest);
         Task<bool> DeleteAsync(Guid Id);
+        Task<int> GetRemainingDayNumberAsync(Guid userId);
         Task<List<LeaveRequestItemDto>> SearchAsync(SearchLeaveRequestDto input);
         Task<List<LeaveRequestItemDto>> GetUserRequestAsync(GetLeaveRequestDto userInfo);
         Task<LeaveRequestDto> ApproveAsync(Guid id);

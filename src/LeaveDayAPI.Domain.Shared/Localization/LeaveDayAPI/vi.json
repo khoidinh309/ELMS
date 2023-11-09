@@ -13,6 +13,7 @@
     "User:NotFound": "Nhân viên không tồn tại, vui lòng kiểm tra lại",
     "LeaveRequest:InValidDate": "Thiết lập ngày không hợp lệ, ngày bắt đầu phải là ngày sau hôm nay và không được lớn hơn ngày kết thúc",
     "LeaveRequest:NotFound": "Không thể cập nhật yêu cầu đã được phê duyệt",
-    "LeaveRequest:ApproveError":  "Yêu cầu đã bị từ chối trước đó, không thể phê duyệt lại",
+    "LeaveRequest:ApproveError": "Yêu cầu đã bị từ chối trước đó, không thể phê duyệt lại",
+    "LeaveRequest:NotEnoughRemainingDay": "Số ngày nghỉ yêu cầu vượt quá mức hiện có, bạn chỉ còn {0} ngày"
   }
 }
