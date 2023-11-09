@@ -1,0 +1,19 @@
+{
+  "culture": "en",
+  "texts": {
+    "Menu:Home": "Home",
+    "Welcome": "Welcome",
+    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io.",
+    "CreatePermission": "Create request",
+    "UpdatePermission": "Update  request",
+    "ViewPermission": "View/Search request",
+    "DeletePermission": "Delete/Cancel request",
+    "ApprovePermission": "Approve Request",
+    "LeaveRequest:NotFound": "Leave Request Not Found",
+    "User:NotFound": "User is not existing",
+    "LeaveRequest:InValidDate": "Invalid date time, check the starting date that is not in the past for now or greater than the ending one",
+    "LeaveRequest:NotFound": "Approved Request can not be updated, let create a new one",
+    "LeaveRequest:ApproveError" :  "Can not approve a request that has been rejected",
+
+  }
+}
