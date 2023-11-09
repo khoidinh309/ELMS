@@ -13,8 +13,8 @@ using Volo.Abp.EntityFrameworkCore;
 namespace LeaveDayAPI.Migrations
 {
     [DbContext(typeof(LeaveDayAPIDbContext))]
-    [Migration("20231109040417_Added_LeaveRequests")]
-    partial class AddedLeaveRequests
+    [Migration("20231109150823_Add_Leave_request")]
+    partial class AddLeaverequest
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -22,7 +22,7 @@ namespace LeaveDayAPI.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasAnnotation("_Abp_DatabaseProvider", EfCoreDatabaseProvider.SqlServer)
-                .HasAnnotation("ProductVersion", "7.0.10")
+                .HasAnnotation("ProductVersion", "7.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);

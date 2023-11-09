@@ -8,6 +8,8 @@ using System.Threading.Tasks;
 
 namespace LeaveDayAPI.Controllers.LeaveRequests
 {
+    [ApiController]
+    [Route("api/[controller]/[action]")]
     public class LeaveRequestController : LeaveDayAPIController
     {
         private readonly ILeaveRequestService _leaveRequestService;

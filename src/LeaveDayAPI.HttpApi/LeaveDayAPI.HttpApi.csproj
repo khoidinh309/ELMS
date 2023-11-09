@@ -10,6 +10,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\LeaveDayAPI.Application.Contracts\LeaveDayAPI.Application.Contracts.csproj" />
+    <ProjectReference Include="..\LeaveDayAPI.EntityFrameworkCore\LeaveDayAPI.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>
