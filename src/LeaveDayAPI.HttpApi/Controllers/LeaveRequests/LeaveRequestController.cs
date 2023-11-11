@@ -20,9 +20,9 @@ namespace LeaveDayAPI.Controllers.LeaveRequests
         }
 
         [HttpPost]
-        public async Task<List<LeaveRequestItemDto>> GetRequestListOfUser(GetLeaveRequestDto userInfo)
+        public async Task<List<LeaveRequestItemDto>> GetRequestListOfUser(Guid Id)
         {
-            return await _leaveRequestService.GetUserRequestAsync(userInfo);
+            return await _leaveRequestService.GetUserRequestAsync(Id);
         }
 
         [HttpPost]
@@ -53,6 +53,12 @@ namespace LeaveDayAPI.Controllers.LeaveRequests
         public async Task<LeaveRequestDto> ApproveRequest(Guid id)
         {
             return await _leaveRequestService.ApproveAsync(id);
+        }
+
+        [HttpPost]
+        public async Task<LeaveRequestDto> RejectRequest(Guid id)
+        {
+            return await _leaveRequestService.RejectAsync(id);
         }
 
         [HttpGet]

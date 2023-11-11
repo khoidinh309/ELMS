@@ -19,25 +19,28 @@ using Volo.Abp.Uow;
 
 namespace LeaveDayAPI.LeaveRequests
 {
+    [RemoteService(false)]
     [Authorize]
-    public class RequestLeaveService : LeaveDayAPIAppService, ILeaveRequestService
+    public class LeaveRequestService : LeaveDayAPIAppService, ILeaveRequestService
     {
         private readonly IRepository<LeaveRequest, Guid> _leaveRequestRepository;
         private readonly IRepository<IdentityUser, Guid> _userRepository;
         private readonly IStoreProcedureProviderService _storeProcedureProvider;
-        private readonly IRepository<LeaveDay, Guid> _leaveDayRepository;
+        private readonly IRepository<LeaveDay> _leaveDayRepository;
 
-        public RequestLeaveService(IRepository<LeaveRequest, Guid> leaveRequestRepository
+        public LeaveRequestService(IRepository<LeaveRequest, Guid> leaveRequestRepository
                                     ,IRepository<IdentityUser, Guid> userRepository
-                                    ,IRepository<LeaveDay, Guid> leaveDayRepository
+                                    ,IRepository<LeaveDay> leaveDayRepository
+                                    , IStoreProcedureProviderService storeProcedureProvide
         )
         {
             this._leaveRequestRepository = leaveRequestRepository;
             this._userRepository = userRepository;
             this._leaveDayRepository = leaveDayRepository;
+            this._storeProcedureProvider = storeProcedureProvide;
         }
 
-        [Authorize(LeaveDayAPIPermissions.ApprovePermission)]
+        //[Authorize(LeaveDayAPIPermissions.ApprovePermission)]
         public async Task<LeaveRequestDto> ApproveAsync(Guid id)
         {
             var leave_request = await _leaveRequestRepository.GetAsync(id);
@@ -55,7 +58,12 @@ namespace LeaveDayAPI.LeaveRequests
             leave_request.ApproveStatus = ApproveStatus.IsApproved;
 
             var request_days_number = leave_request.EndDate.Subtract(leave_request.StartDate).Days + 1;
-            var user_remaining_day = await _leaveDayRepository.GetAsync(leave_request.UserId);
+            var user_remaining_day = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == leave_request.UserId);
+            
+            if (user_remaining_day == null)
+            {
+                throw new UserFriendlyException(L["User:NotFound"]);
+            }
             user_remaining_day.RemainingDayNumber -= request_days_number;
             await _leaveDayRepository.UpdateAsync(user_remaining_day);
 
@@ -66,48 +74,99 @@ namespace LeaveDayAPI.LeaveRequests
             var request_user = await _userRepository.GetAsync(leave_request.UserId);
 
             leave_request_dto.Surname = request_user.Surname;
+            leave_request_dto.Email = request_user.Email;
 
             return leave_request_dto;
         }
 
-        [Authorize(LeaveDayAPIPermissions.CreatePermission)]
-        public async Task<LeaveRequestDto> CreateAsync(CreateLeaveRequestDto leaveRequest)
+        public async Task<LeaveRequestDto> RejectAsync(Guid id)
         {
-            if(leaveRequest.StartDate > leaveRequest.EndDate)
+            var leave_request = await _leaveRequestRepository.GetAsync(id);
+
+            if (leave_request == null)
             {
-                throw new UserFriendlyException(L["LeaveRequest:InValidDate"]);
+                throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
             }
 
-            var request_day_number = leaveRequest.EndDate.Subtract(leaveRequest.StartDate).Days + 1;
-            var user_remaining_days_number = await GetRemainingDayNumberAsync((Guid)CurrentUser.Id);
-
-            if(user_remaining_days_number < request_day_number)
+            if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
             {
-                throw new UserFriendlyException(L["LeaveRequest:NotEnoughRemainingDay", user_remaining_days_number]);
+                throw new UserFriendlyException(L["LeaveRequest:ApproveError"]);
             }
 
-            var leave_request = new LeaveRequest
-            {
-                Title = leaveRequest.Title,
-                Reason = leaveRequest.Reason,
-                StartDate = leaveRequest.StartDate,
-                EndDate = leaveRequest.EndDate,
-                UserId = (Guid)CurrentUser.Id,
-                ApproveStatus = ApproveStatus.IsRequested
-            };
+            leave_request.ApproveStatus = ApproveStatus.IsApproved;
 
-            await _leaveRequestRepository.InsertAsync(leave_request);
+            var request_days_number = leave_request.EndDate.Subtract(leave_request.StartDate).Days + 1;
+            var user_remaining_day = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == leave_request.UserId);
+
+            if (user_remaining_day == null)
+            {
+                throw new UserFriendlyException(L["User:NotFound"]);
+            }
+            user_remaining_day.RemainingDayNumber -= request_days_number;
+            await _leaveDayRepository.UpdateAsync(user_remaining_day);
+
+            await _leaveRequestRepository.UpdateAsync(leave_request);
             await CurrentUnitOfWork.SaveChangesAsync();
 
             var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
+            var request_user = await _userRepository.GetAsync(leave_request.UserId);
 
-            leave_request_dto.Surname = CurrentUser.SurName;
-            leave_request_dto.Email = CurrentUser.Email;
+            leave_request_dto.Surname = request_user.Surname;
+            leave_request_dto.Email = request_user.Email;
 
             return leave_request_dto;
         }
 
-        [Authorize(LeaveDayAPIPermissions.DeletePermission)]
+        //[Authorize(LeaveDayAPIPermissions.CreatePermission)]
+        public async Task<LeaveRequestDto> CreateAsync(CreateLeaveRequestDto leaveRequest)
+        {
+            try
+            {
+                if (leaveRequest.StartDate > leaveRequest.EndDate)
+                {
+                    throw new UserFriendlyException(L["LeaveRequest:InValidDate"]);
+                }
+
+                if (CurrentUser == null)
+                {
+                    throw new UserFriendlyException(L["User:NotFound"]);
+                }
+
+                var request_day_number = leaveRequest.EndDate.Subtract(leaveRequest.StartDate).Days + 1;
+                var user_remaining_days_number = await GetRemainingDayNumberAsync((Guid)CurrentUser.Id);
+
+                if (user_remaining_days_number < request_day_number)
+                {
+                    throw new UserFriendlyException(L["LeaveRequest:NotEnoughRemainingDay", user_remaining_days_number]);
+                }
+
+                var leave_request = new LeaveRequest
+                {
+                    Title = leaveRequest.Title,
+                    Reason = leaveRequest.Reason,
+                    StartDate = leaveRequest.StartDate,
+                    EndDate = leaveRequest.EndDate,
+                    UserId = (Guid)CurrentUser.Id,
+                    ApproveStatus = ApproveStatus.IsRequested
+                };
+
+                await _leaveRequestRepository.InsertAsync(leave_request);
+                await CurrentUnitOfWork.SaveChangesAsync();
+
+                var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
+
+                leave_request_dto.Surname = CurrentUser.SurName;
+                leave_request_dto.Email = CurrentUser.Email;
+
+                return leave_request_dto;
+            }
+            catch(Exception ex)
+            {
+                throw new UserFriendlyException(ex.ToString());
+            }
+        }
+
+        //[Authorize(LeaveDayAPIPermissions.DeletePermission)]
         public async Task<bool> DeleteAsync(Guid Id)
         {
             var leave_request = _leaveRequestRepository.GetAsync(Id);
@@ -122,18 +181,17 @@ namespace LeaveDayAPI.LeaveRequests
             return true;
         }
 
-        [Authorize(LeaveDayAPIPermissions.ViewPermission)]
+        //[Authorize(LeaveDayAPIPermissions.ViewPermission)]
         public async Task<int> GetRemainingDayNumberAsync(Guid userId)
         {
-            var user = await _leaveDayRepository.GetAsync(userId);
-            return user.RemainingDayNumber;
+            var user = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == userId);
+            return user?.RemainingDayNumber ?? -1;
         }
 
-        [Authorize(LeaveDayAPIPermissions.ViewPermission)]
-        public async Task<List<LeaveRequestItemDto>> GetUserRequestAsync(GetLeaveRequestDto userInfo)
+        //[Authorize(LeaveDayAPIPermissions.ViewPermission)]
+        public async Task<List<LeaveRequestItemDto>> GetUserRequestAsync(Guid Id)
         {
-            var request_user = await _userRepository
-                .SingleOrDefaultAsync(u => u.Surname == userInfo.Surname && u.Email == userInfo.Email);
+            var request_user = await _userRepository.FindAsync(Id);
 
             if(request_user == null)
             {
@@ -154,15 +212,16 @@ namespace LeaveDayAPI.LeaveRequests
             return request_list_Dto;
         }
 
-        [Authorize(LeaveDayAPIPermissions.ViewPermission)]
+        //[Authorize(LeaveDayAPIPermissions.ViewPermission)]
         public async Task<List<LeaveRequestItemDto>> SearchAsync(SearchLeaveRequestDto input)
         {
+            await CurrentUnitOfWork.SaveChangesAsync();
             List<LeaveRequestItemDto> search_result = await _storeProcedureProvider.SearchProcedure(input);
 
             return search_result;
         }
 
-        [Authorize(LeaveDayAPIPermissions.UpdatePermission)]
+        //[Authorize(LeaveDayAPIPermissions.UpdatePermission)]
         public async Task<LeaveRequestDto> UpdateAsync(UpdateLeaveRequestDto leaveRequest)
         {
             if (leaveRequest.StartDate > leaveRequest.EndDate)

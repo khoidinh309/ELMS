@@ -95,6 +95,7 @@ public class LeaveDayAPIDbContext :
         builder.Entity<LeaveDay>(ld =>
         {
             ld.ToTable("LeaveDays");
+            ld.HasKey(x => new { x.UserId  });
             ld.Property(x => x.UserId).IsRequired();
             ld.Property(x => x.RemainingDayNumber).IsRequired();
         });

@@ -7,9 +7,14 @@ using Volo.Abp.Domain.Entities;
 
 namespace LeaveDayAPI.LeaveRequests
 {
-    public class LeaveDay : Entity<Guid>
+    public class LeaveDay : Entity
     {
         public Guid UserId { get; set; }
         public int RemainingDayNumber { get; set;}
+
+        public override object[] GetKeys()
+        {
+            return new object[] { UserId };
+        }
     }
 }

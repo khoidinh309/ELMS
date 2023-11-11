@@ -9,10 +9,10 @@ namespace LeaveDayAPI.LeaveRequests
     {
         [Required]
         [MaxLength(LeaveRequestConsts.MaxTitleLength)]
-        public string Title { get; set; }
+        public  string Title { get; set; }
 
         [Required]
-        public string Reason { get; set; }
+        public  string Reason { get; set; }
 
         [Required]
         public DateTime StartDate { get; set; }

@@ -4,6 +4,7 @@ using LeaveDayAPI.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Volo.Abp.EntityFrameworkCore;
 
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace LeaveDayAPI.Migrations
 {
     [DbContext(typeof(LeaveDayAPIDbContext))]
-    partial class LeaveDayAPIDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231110103328_change_leave_day_primary_key")]
+    partial class changeleavedayprimarykey
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -27,13 +30,12 @@ namespace LeaveDayAPI.Migrations
             modelBuilder.Entity("LeaveDayAPI.LeaveRequests.LeaveDay", b =>
                 {
                     b.Property<Guid>("UserId")
-                        .ValueGeneratedOnAdd()
                         .HasColumnType("uniqueidentifier");
 
                     b.Property<int>("RemainingDayNumber")
                         .HasColumnType("int");
 
-                    b.HasKey("UserId");
+                    b.HasKey("UserId", "RemainingDayNumber");
 
                     b.ToTable("LeaveDays", (string)null);
                 });

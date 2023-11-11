@@ -5,7 +5,7 @@ namespace LeaveDayAPI.Controllers;
 
 /* Inherit your controllers from this class.
  */
-public abstract class LeaveDayAPIController : AbpControllerBase
+public abstract class LeaveDayAPIController : AbpController
 {
     protected LeaveDayAPIController()
     {
