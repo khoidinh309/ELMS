@@ -1,4 +1,5 @@
-﻿using LeaveDayAPI.Permissions;
+﻿using Azure.Core;
+using LeaveDayAPI.Permissions;
 using LeaveDayAPI.StoreProcedureProvider;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Data.SqlClient;
@@ -40,89 +41,36 @@ namespace LeaveDayAPI.LeaveRequests
             this._storeProcedureProvider = storeProcedureProvide;
         }
 
-        //[Authorize(LeaveDayAPIPermissions.ApprovePermission)]
-        public async Task<LeaveRequestDto> ApproveAsync(Guid id)
+        [Authorize(LeaveDayAPIPermissions.ApprovePermission)]
+        public async Task<bool> ApproveOrRejectAsync(ApproveLeaveRequestDto request)
         {
-            var leave_request = await _leaveRequestRepository.GetAsync(id);
+            if(request == null)
+            {
+                throw new UserFriendlyException(L["LeaveReques:InvalidRequest"]);
+            }
 
-            if(leave_request == null ) 
+            var leave_request = await _leaveRequestRepository.SingleOrDefaultAsync(r => r.Id == request.Id);
+            if(leave_request == null)
             {
                 throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
             }
 
-            if(leave_request.ApproveStatus == ApproveStatus.IsRejected)
+            if (request.ApproveStatus == ApproveStatus.IsApproved)
             {
-                throw new UserFriendlyException(L["LeaveRequest:ApproveError"]);
+                return await this.ApproveAsync(request.Id);
             }
-
-            leave_request.ApproveStatus = ApproveStatus.IsApproved;
-
-            var request_days_number = leave_request.EndDate.Subtract(leave_request.StartDate).Days + 1;
-            var user_remaining_day = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == leave_request.UserId);
-            
-            if (user_remaining_day == null)
+            else
             {
-                throw new UserFriendlyException(L["User:NotFound"]);
+                return await this.RejectAsync(request.Id);
             }
-            user_remaining_day.RemainingDayNumber -= request_days_number;
-            await _leaveDayRepository.UpdateAsync(user_remaining_day);
-
-            await _leaveRequestRepository.UpdateAsync(leave_request);
-            await CurrentUnitOfWork.SaveChangesAsync();
-
-            var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
-            var request_user = await _userRepository.GetAsync(leave_request.UserId);
-
-            leave_request_dto.Surname = request_user.Surname;
-            leave_request_dto.Email = request_user.Email;
-
-            return leave_request_dto;
         }
 
-        public async Task<LeaveRequestDto> RejectAsync(Guid id)
-        {
-            var leave_request = await _leaveRequestRepository.GetAsync(id);
-
-            if (leave_request == null)
-            {
-                throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
-            }
-
-            if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
-            {
-                throw new UserFriendlyException(L["LeaveRequest:ApproveError"]);
-            }
-
-            leave_request.ApproveStatus = ApproveStatus.IsApproved;
-
-            var request_days_number = leave_request.EndDate.Subtract(leave_request.StartDate).Days + 1;
-            var user_remaining_day = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == leave_request.UserId);
-
-            if (user_remaining_day == null)
-            {
-                throw new UserFriendlyException(L["User:NotFound"]);
-            }
-            user_remaining_day.RemainingDayNumber -= request_days_number;
-            await _leaveDayRepository.UpdateAsync(user_remaining_day);
-
-            await _leaveRequestRepository.UpdateAsync(leave_request);
-            await CurrentUnitOfWork.SaveChangesAsync();
-
-            var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
-            var request_user = await _userRepository.GetAsync(leave_request.UserId);
-
-            leave_request_dto.Surname = request_user.Surname;
-            leave_request_dto.Email = request_user.Email;
-
-            return leave_request_dto;
-        }
-
-        //[Authorize(LeaveDayAPIPermissions.CreatePermission)]
+        [Authorize(LeaveDayAPIPermissions.CreatePermission)]
         public async Task<LeaveRequestDto> CreateAsync(CreateLeaveRequestDto leaveRequest)
         {
             try
             {
-                if (leaveRequest.StartDate > leaveRequest.EndDate)
+                if (leaveRequest.StartDate < DateTime.Now || leaveRequest.StartDate > leaveRequest.EndDate )
                 {
                     throw new UserFriendlyException(L["LeaveRequest:InValidDate"]);
                 }
@@ -166,7 +114,7 @@ namespace LeaveDayAPI.LeaveRequests
             }
         }
 
-        //[Authorize(LeaveDayAPIPermissions.DeletePermission)]
+        [Authorize(LeaveDayAPIPermissions.DeletePermission)]
         public async Task<bool> DeleteAsync(Guid Id)
         {
             var leave_request = _leaveRequestRepository.GetAsync(Id);
@@ -181,14 +129,14 @@ namespace LeaveDayAPI.LeaveRequests
             return true;
         }
 
-        //[Authorize(LeaveDayAPIPermissions.ViewPermission)]
+        [Authorize(LeaveDayAPIPermissions.ViewPermission)]
         public async Task<int> GetRemainingDayNumberAsync(Guid userId)
         {
             var user = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == userId);
             return user?.RemainingDayNumber ?? -1;
         }
 
-        //[Authorize(LeaveDayAPIPermissions.ViewPermission)]
+        [Authorize(LeaveDayAPIPermissions.ViewPermission)]
         public async Task<List<LeaveRequestItemDto>> GetUserRequestAsync(Guid Id)
         {
             var request_user = await _userRepository.FindAsync(Id);
@@ -212,16 +160,15 @@ namespace LeaveDayAPI.LeaveRequests
             return request_list_Dto;
         }
 
-        //[Authorize(LeaveDayAPIPermissions.ViewPermission)]
+        [Authorize(LeaveDayAPIPermissions.ViewPermission)]
         public async Task<List<LeaveRequestItemDto>> SearchAsync(SearchLeaveRequestDto input)
         {
-            await CurrentUnitOfWork.SaveChangesAsync();
             List<LeaveRequestItemDto> search_result = await _storeProcedureProvider.SearchProcedure(input);
 
             return search_result;
         }
 
-        //[Authorize(LeaveDayAPIPermissions.UpdatePermission)]
+        [Authorize(LeaveDayAPIPermissions.UpdatePermission)]
         public async Task<LeaveRequestDto> UpdateAsync(UpdateLeaveRequestDto leaveRequest)
         {
             if (leaveRequest.StartDate > leaveRequest.EndDate)
@@ -236,7 +183,7 @@ namespace LeaveDayAPI.LeaveRequests
                 throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
             }
 
-            if (leave_request.ApproveStatus == ApproveStatus.IsRequested)
+            if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
             {
                 throw new UserFriendlyException(L["LeaveRequest:UpdateError"]);
             }
@@ -257,5 +204,106 @@ namespace LeaveDayAPI.LeaveRequests
 
             return leave_request_dto;
         }
+
+        [Authorize(LeaveDayAPIPermissions.ApprovePermission)]
+        public async Task<bool> MultipleApproveAsync(List<ApproveLeaveRequestDto> request_list)
+        {
+            if(request_list == null)
+            {
+                throw new UserFriendlyException(L["LeaveReques:InvalidRequest"]);
+            }
+
+            bool Is_Failure = false;
+
+            foreach(var request in  request_list)
+            {
+                
+                if(request.ApproveStatus == ApproveStatus.IsApproved)
+                {
+                    Is_Failure = await this.ApproveAsync(request.Id);
+                }
+                else
+                {
+                    Is_Failure = await this.RejectAsync(request.Id);
+                }
+
+                if(Is_Failure)
+                {
+                    throw new UserFriendlyException("Internal Error, please try again");
+                }
+            }
+
+            return true;
+        }
+
+        #region private method
+
+        private async Task<bool> ApproveAsync(Guid id)
+        {
+            var leave_request = await _leaveRequestRepository.GetAsync(id);
+
+            if (leave_request == null)
+            {
+                throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
+            }
+
+            if (leave_request.ApproveStatus == ApproveStatus.IsRejected)
+            {
+                throw new UserFriendlyException(L["LeaveRequest:ApproveError"]);
+            }
+
+            leave_request.ApproveStatus = ApproveStatus.IsApproved;
+
+            var request_days_number = leave_request.EndDate.Subtract(leave_request.StartDate).Days + 1;
+            var user_remaining_day = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == leave_request.UserId);
+
+            if (user_remaining_day == null)
+            {
+                throw new UserFriendlyException(L["User:NotFound"]);
+            }
+            user_remaining_day.RemainingDayNumber -= request_days_number;
+            await _leaveDayRepository.UpdateAsync(user_remaining_day);
+
+            await _leaveRequestRepository.UpdateAsync(leave_request);
+            await CurrentUnitOfWork.SaveChangesAsync();
+
+            var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
+            var request_user = await _userRepository.GetAsync(leave_request.UserId);
+
+            leave_request_dto.Surname = request_user.Surname;
+            leave_request_dto.Email = request_user.Email;
+
+            return leave_request_dto != null;
+        }
+
+        private async Task<bool> RejectAsync(Guid id)
+        {
+            var leave_request = await _leaveRequestRepository.GetAsync(id);
+
+            if (leave_request == null)
+            {
+                throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
+            }
+
+            if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
+            {
+                throw new UserFriendlyException(L["LeaveRequest:ApproveError"]);
+            }
+
+            leave_request.ApproveStatus = ApproveStatus.IsRejected;
+
+            await _leaveRequestRepository.UpdateAsync(leave_request);
+
+            var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
+            var request_user = await _userRepository.GetAsync(leave_request.UserId);
+
+            leave_request_dto.Surname = request_user.Surname;
+            leave_request_dto.Email = request_user.Email;
+
+            return leave_request_dto != null ;
+        }
+
+        #endregion
+
     }
 }

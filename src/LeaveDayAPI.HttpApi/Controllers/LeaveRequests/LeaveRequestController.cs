@@ -1,4 +1,5 @@
-﻿using LeaveDayAPI.LeaveRequests;
+﻿using Azure.Core;
+using LeaveDayAPI.LeaveRequests;
 using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
@@ -50,15 +51,15 @@ namespace LeaveDayAPI.Controllers.LeaveRequests
         }
 
         [HttpPost]
-        public async Task<LeaveRequestDto> ApproveRequest(Guid id)
+        public async Task<bool> ApproveOrRejectRequest(ApproveLeaveRequestDto request)
         {
-            return await _leaveRequestService.ApproveAsync(id);
+            return await _leaveRequestService.ApproveOrRejectAsync(request);
         }
 
         [HttpPost]
-        public async Task<LeaveRequestDto> RejectRequest(Guid id)
+        public async Task<bool> MultipleApproveOrRejectRequests(List<ApproveLeaveRequestDto> request_list)
         {
-            return await _leaveRequestService.RejectAsync(id);
+            return await _leaveRequestService.MultipleApproveAsync(request_list);
         }
 
         [HttpGet]

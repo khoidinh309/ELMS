@@ -15,5 +15,6 @@
     "LeaveRequest:NotFound": "Approved Request can not be updated, let create a new one",
     "LeaveRequest:ApproveError": "Can not approve a request that has been rejected",
     "LeaveRequest:NotEnoughRemainingDay":  "Your remaining days is not enough, you only have {0} day(s)",
+    "LeaveReques:InvalidRequest": "Something went wrong, please try again",
   }
 }

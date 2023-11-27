@@ -8,8 +8,8 @@ namespace LeaveDayAPI.LeaveRequests
     {
         public string? Surname { get; set; }
         public string? Email { get; set; }
-        public DateTime? StartDate { get; set; }
-        public DateTime? EndDate { get; set; }
-        public ApproveStatus? ApproveStatus { get; set; }
+        public string StartDate { get; set; }
+        public string EndDate { get; set; }
+        public string ApproveStatus { get; set; }
     }
 }

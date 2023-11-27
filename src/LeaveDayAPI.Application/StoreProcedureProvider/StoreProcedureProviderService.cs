@@ -2,110 +2,107 @@
 using LeaveDayAPI.LeaveRequests;
 using Microsoft.Data.SqlClient;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
+using Polly;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Linq;
 using System.Reflection.PortableExecutable;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.DependencyInjection;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Domain.Repositories.EntityFrameworkCore;
 using Volo.Abp.EntityFrameworkCore;
 using Volo.Abp.Identity;
+using Volo.Abp.Users;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace LeaveDayAPI.StoreProcedureProvider
 {
     [RemoteService(false)]
-    public class StoreProcedureProviderService : LeaveDayAPIAppService, IStoreProcedureProviderService
+    public class StoreProcedureProviderService : EfCoreRepository<LeaveDayAPIDbContext, LeaveRequest, Guid>, IStoreProcedureProviderService
     {
-        private readonly IRepository<LeaveRequest, Guid> _leaveRequestRepository;
         private readonly IRepository<IdentityUser, Guid> _userRepository;
-        private readonly IDbContextProvider<LeaveDayAPIDbContext> _dbContextProvider;
 
         public StoreProcedureProviderService(
-            IRepository<LeaveRequest, Guid> leaveRequestRepository,
-            IRepository<IdentityUser, Guid> userRepository,
-            IDbContextProvider<LeaveDayAPIDbContext> dbContextProvider
-        )
+           IRepository<IdentityUser, Guid> userRepository,
+           IDbContextProvider<LeaveDayAPIDbContext> dbContextProvider
+        ) : base(dbContextProvider)
         {
-            this._leaveRequestRepository = leaveRequestRepository;
             this._userRepository = userRepository;
-            this._dbContextProvider = dbContextProvider;
         }
         public async Task<List<LeaveRequestItemDto>> SearchProcedure(SearchLeaveRequestDto input)
         {
             var result_list = new List<LeaveRequestItemDto>();
 
-            using (var dbContext = _dbContextProvider.GetDbContext())
+            var commandText = "LEAVE_REQUEST_SEARCH";
+            var commandType = CommandType.StoredProcedure;
+            var parameter_list = new List<SqlParameter>();
+            var surNameParam = new SqlParameter("@p_surname", input.Surname);
+            parameter_list.Add(surNameParam);
+
+            var emailNameParam = new SqlParameter("@p_email", input.Email);
+            parameter_list.Add(emailNameParam);
+
+            var startDateNameParam = new SqlParameter("@p_start_date", input.StartDate);
+            parameter_list.Add(startDateNameParam);
+
+            var endDateNameParam = new SqlParameter("@p_end_date", input.EndDate);
+            parameter_list.Add(endDateNameParam);
+
+            var approveStatusParam = new SqlParameter("@p_approve_status",input.ApproveStatus);
+            parameter_list.Add(approveStatusParam);
+
+
+            using (var command = CreateCommand(commandText, commandType, parameter_list))
             {
-                var connection = dbContext.Database.GetDbConnection();
-
-                if (connection.State != ConnectionState.Open)
+                using (var dataReader = await command.ExecuteReaderAsync())
                 {
-                    await connection.OpenAsync();
-                }
-
-                using (var command = connection.CreateCommand())
-                {
-                    command.CommandText = "LEAVE_REQUEST_SEARCH";
-                    command.CommandType = CommandType.StoredProcedure;
-
-                    var surNameParam = new SqlParameter("@p_surname", input.Surname);
-                    command.Parameters.Add(surNameParam);
-
-                    var emailNameParam = new SqlParameter("@p_email", input.Email);
-                    command.Parameters.Add(emailNameParam);
-
-                    var startDateNameParam = new SqlParameter("@p_start_date", input.StartDate);
-                    command.Parameters.Add(startDateNameParam);
-
-                    var endDateNameParam = new SqlParameter("@p_end_date", input.EndDate);
-                    command.Parameters.Add(endDateNameParam);
-
-                    var approveStatusParam = new SqlParameter("@p_approve_status", input.EndDate);
-                    command.Parameters.Add(approveStatusParam);
-
-                    // Initialize a transaction
-                    using (var transaction = connection.BeginTransaction())
+                    while (await dataReader.ReadAsync())
                     {
-                        try
+                        var idOrdinal = dataReader.GetOrdinal("Id");
+                        var id = dataReader.IsDBNull(idOrdinal) ? Guid.Empty : dataReader.GetGuid(idOrdinal);
+
+                        var leave_request = new LeaveRequestItemDto
                         {
-                            
-                            command.Transaction = transaction;
+                            Id = id,
+                            SurName = dataReader.IsDBNull(dataReader.GetOrdinal("Surname"))
+                                ? dataReader.GetString(dataReader.GetOrdinal("UserName"))
+                                : dataReader.GetString(dataReader.GetOrdinal("Surname")) ?? "DefaultSurname",
+                            Title = dataReader.IsDBNull(dataReader.GetOrdinal("Title"))
+                                ? "Not available"
+                                : dataReader.GetString(dataReader.GetOrdinal("Title")) ?? "DefaultTitle",
+                            CreationTime = dataReader.GetDateTime(dataReader.GetOrdinal("CreationTime")),
+                        };
 
-                            using (var reader = await command.ExecuteReaderAsync())
-                            {
-                                while (reader.Read())
-                                {
-                                    var id = reader.GetGuid(reader.GetOrdinal("Id"));
-                                    var user = await _userRepository.SingleOrDefaultAsync(u => u.Id == id);
-                                    var leave_request = new LeaveRequestItemDto
-                                    {
-                                        Id = id,
-                                        SurName = user.Surname,
-                                        Title = reader.GetString(reader.GetOrdinal("Title")),
-                                        CreationTime = reader.GetDateTime(reader.GetOrdinal("CreationTime"))
-                                    };
+                        result_list.Add(leave_request);
 
-                                    result_list.Add(leave_request);
-                                }
-                            }
-
-                            transaction.Commit();
-                        }
-                        catch
-                        {
-                            transaction.Rollback();
-                            throw new UserFriendlyException("Searching error");
-                        }
                     }
-                    connection.Close();
                 }
             }
 
             return result_list;
+        }
+
+        private DbCommand CreateCommand(string commandText, CommandType commandType, List<SqlParameter> parameters)
+        {
+            var command = DbContext.Database.GetDbConnection().CreateCommand();
+
+            command.CommandText = commandText;
+            command.CommandType = commandType;
+            command.Transaction = DbContext.Database.CurrentTransaction?.GetDbTransaction();
+
+            foreach (var parameter in parameters)
+            {
+                command.Parameters.Add(parameter);
+            }
+
+            return command;
         }
     }
 }

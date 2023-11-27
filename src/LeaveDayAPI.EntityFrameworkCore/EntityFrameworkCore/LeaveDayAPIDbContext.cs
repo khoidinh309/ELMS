@@ -99,5 +99,10 @@ public class LeaveDayAPIDbContext :
             ld.Property(x => x.UserId).IsRequired();
             ld.Property(x => x.RemainingDayNumber).IsRequired();
         });
+
+        builder.Entity<IdentityUser>(user =>
+        {
+            user.ToTable("AbpUsers", tb => tb.HasTrigger("AfterInsertUser"));
+        });
     }
 }

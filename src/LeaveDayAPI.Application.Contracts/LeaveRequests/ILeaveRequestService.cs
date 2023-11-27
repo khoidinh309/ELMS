@@ -13,7 +13,7 @@ namespace LeaveDayAPI.LeaveRequests
         Task<int> GetRemainingDayNumberAsync(Guid userId);
         Task<List<LeaveRequestItemDto>> SearchAsync(SearchLeaveRequestDto input);
         Task<List<LeaveRequestItemDto>> GetUserRequestAsync(Guid Id);
-        Task<LeaveRequestDto> ApproveAsync(Guid id);
-        Task<LeaveRequestDto> RejectAsync(Guid id);
+        Task<bool> ApproveOrRejectAsync(ApproveLeaveRequestDto request);
+        Task<bool> MultipleApproveAsync(List<ApproveLeaveRequestDto> request_list);
     }
 }
