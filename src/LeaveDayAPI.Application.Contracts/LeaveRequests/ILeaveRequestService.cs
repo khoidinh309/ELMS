@@ -15,5 +15,6 @@ namespace LeaveDayAPI.LeaveRequests
         Task<List<LeaveRequestItemDto>> GetUserRequestAsync(Guid Id);
         Task<bool> ApproveOrRejectAsync(ApproveLeaveRequestDto request);
         Task<bool> MultipleApproveAsync(List<ApproveLeaveRequestDto> request_list);
+        Task<LeaveRequestDto> ViewRequestDetail(Guid request_id);
     }
 }

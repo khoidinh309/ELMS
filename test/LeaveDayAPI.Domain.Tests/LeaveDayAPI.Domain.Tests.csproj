@@ -9,11 +9,16 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\LeaveDayAPI.Domain\LeaveDayAPI.Domain.csproj" />
     <ProjectReference Include="..\LeaveDayAPI.EntityFrameworkCore.Tests\LeaveDayAPI.EntityFrameworkCore.Tests.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.2.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="LeaveRequest\" />
   </ItemGroup>
 
 </Project>

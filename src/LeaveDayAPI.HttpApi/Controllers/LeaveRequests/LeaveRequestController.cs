@@ -67,5 +67,11 @@ namespace LeaveDayAPI.Controllers.LeaveRequests
         {
             return await _leaveRequestService.GetRemainingDayNumberAsync(userId);
         }
+
+        [HttpGet]
+        public async Task<LeaveRequestDto> ViewRequestDetail(Guid request_id)
+        {
+            return await this._leaveRequestService.ViewRequestDetail(request_id);
+        }
     }
 }

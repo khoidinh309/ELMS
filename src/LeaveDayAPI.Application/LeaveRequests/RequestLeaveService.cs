@@ -12,6 +12,7 @@ using System.Text;
 using System.Threading.Tasks;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Clients;
 using Volo.Abp.Domain.Entities;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
@@ -24,6 +25,8 @@ namespace LeaveDayAPI.LeaveRequests
     [Authorize]
     public class LeaveRequestService : LeaveDayAPIAppService, ILeaveRequestService
     {
+        private readonly LeaveDayManager _leaveDayManager;
+        private readonly LeaveRequestManager _leaveRequestManager;
         private readonly IRepository<LeaveRequest, Guid> _leaveRequestRepository;
         private readonly IRepository<IdentityUser, Guid> _userRepository;
         private readonly IStoreProcedureProviderService _storeProcedureProvider;
@@ -33,12 +36,16 @@ namespace LeaveDayAPI.LeaveRequests
                                     ,IRepository<IdentityUser, Guid> userRepository
                                     ,IRepository<LeaveDay> leaveDayRepository
                                     , IStoreProcedureProviderService storeProcedureProvide
+                                    , LeaveDayManager leaveDayManager
+                                    , LeaveRequestManager leaveRequestManager
         )
         {
             this._leaveRequestRepository = leaveRequestRepository;
             this._userRepository = userRepository;
             this._leaveDayRepository = leaveDayRepository;
             this._storeProcedureProvider = storeProcedureProvide;
+            this._leaveDayManager = leaveDayManager;
+            this._leaveRequestManager = leaveRequestManager;
         }
 
         [Authorize(LeaveDayAPIPermissions.ApprovePermission)]
@@ -49,19 +56,23 @@ namespace LeaveDayAPI.LeaveRequests
                 throw new UserFriendlyException(L["LeaveReques:InvalidRequest"]);
             }
 
-            var leave_request = await _leaveRequestRepository.SingleOrDefaultAsync(r => r.Id == request.Id);
-            if(leave_request == null)
-            {
-                throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
-            }
-
             if (request.ApproveStatus == ApproveStatus.IsApproved)
             {
-                return await this.ApproveAsync(request.Id);
+                var approve_result =  await this._leaveRequestManager.ApproveAsync(request.Id);
+                if(!approve_result)
+                {
+                    throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
+                }
+                return approve_result;
             }
             else
             {
-                return await this.RejectAsync(request.Id);
+                var reject_result = await this._leaveRequestManager.RejectAsync(request.Id);
+                if(!reject_result)
+                {
+                    throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
+                }
+                return reject_result;
             }
         }
 
@@ -70,7 +81,7 @@ namespace LeaveDayAPI.LeaveRequests
         {
             try
             {
-                if (leaveRequest.StartDate < DateTime.Now || leaveRequest.StartDate > leaveRequest.EndDate )
+                if (this._leaveRequestManager.IsValidDates(leaveRequest.StartDate, leaveRequest.EndDate) == false)
                 {
                     throw new UserFriendlyException(L["LeaveRequest:InValidDate"]);
                 }
@@ -80,11 +91,11 @@ namespace LeaveDayAPI.LeaveRequests
                     throw new UserFriendlyException(L["User:NotFound"]);
                 }
 
-                var request_day_number = leaveRequest.EndDate.Subtract(leaveRequest.StartDate).Days + 1;
-                var user_remaining_days_number = await GetRemainingDayNumberAsync((Guid)CurrentUser.Id);
+                var userId = (Guid)CurrentUser.Id;
 
-                if (user_remaining_days_number < request_day_number)
+                if (await this._leaveDayManager.IsEnoughRemainingDays(leaveRequest.StartDate, leaveRequest.EndDate, userId) == false)
                 {
+                    var user_remaining_days_number = await this._leaveDayManager.GetRemainingDayNumberAsync(userId);
                     throw new UserFriendlyException(L["LeaveRequest:NotEnoughRemainingDay", user_remaining_days_number]);
                 }
 
@@ -117,7 +128,7 @@ namespace LeaveDayAPI.LeaveRequests
         [Authorize(LeaveDayAPIPermissions.DeletePermission)]
         public async Task<bool> DeleteAsync(Guid Id)
         {
-            var leave_request = _leaveRequestRepository.GetAsync(Id);
+            var leave_request = await _leaveRequestRepository.GetAsync(Id);
 
             if(leave_request == null)
             {
@@ -130,16 +141,9 @@ namespace LeaveDayAPI.LeaveRequests
         }
 
         [Authorize(LeaveDayAPIPermissions.ViewPermission)]
-        public async Task<int> GetRemainingDayNumberAsync(Guid userId)
+        public async Task<List<LeaveRequestItemDto>> GetUserRequestAsync(Guid userId)
         {
-            var user = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == userId);
-            return user?.RemainingDayNumber ?? -1;
-        }
-
-        [Authorize(LeaveDayAPIPermissions.ViewPermission)]
-        public async Task<List<LeaveRequestItemDto>> GetUserRequestAsync(Guid Id)
-        {
-            var request_user = await _userRepository.FindAsync(Id);
+            var request_user = await _userRepository.FindAsync(userId);
 
             if(request_user == null)
             {
@@ -147,7 +151,7 @@ namespace LeaveDayAPI.LeaveRequests
             }
 
             var request_list = await _leaveRequestRepository
-                .GetListAsync(lr => lr.UserId == request_user.Id);
+                .GetListAsync(lr => lr.UserId == userId);
 
             var request_list_Dto = ObjectMapper
                 .Map<List<LeaveRequest>, List<LeaveRequestItemDto>>(request_list);
@@ -171,35 +175,32 @@ namespace LeaveDayAPI.LeaveRequests
         [Authorize(LeaveDayAPIPermissions.UpdatePermission)]
         public async Task<LeaveRequestDto> UpdateAsync(UpdateLeaveRequestDto leaveRequest)
         {
-            if (leaveRequest.StartDate > leaveRequest.EndDate)
+            if (this._leaveRequestManager.IsValidDates(leaveRequest.StartDate, leaveRequest.EndDate) == false)
             {
                 throw new UserFriendlyException(L["LeaveRequest:InValidDate"]);
             }
 
-            var leave_request = await _leaveRequestRepository.GetAsync(leaveRequest.Id);
+            var @leave_request = await _leaveRequestRepository.GetAsync(leaveRequest.Id);
 
-            if (leave_request == null)
+            if (@leave_request == null)
             {
                 throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
             }
 
-            if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
+            var userId = (Guid)CurrentUser.Id;
+
+            if (await this._leaveDayManager.IsEnoughRemainingDays(leaveRequest.StartDate, leaveRequest.EndDate, userId) == false)
             {
-                throw new UserFriendlyException(L["LeaveRequest:UpdateError"]);
+                var user_remaining_days_number = await this._leaveDayManager.GetRemainingDayNumberAsync(userId);
+                throw new UserFriendlyException(L["LeaveRequest:NotEnoughRemainingDay", user_remaining_days_number]);
             }
-   
-            leave_request.Title = leaveRequest.Title;
-            leave_request.Reason = leaveRequest.Reason;
-            leave_request.StartDate = leaveRequest.StartDate;
-            leave_request.EndDate = leaveRequest.EndDate;
-            leave_request.ApproveStatus = ApproveStatus.IsRequested;
-            
-            var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
-            var request_user = await _userRepository.GetAsync(leave_request.UserId);
 
-            leave_request_dto.Surname = request_user.Surname;
+            this._leaveRequestManager.UpdateAsync(@leave_request, leaveRequest.Title, 
+                    leaveRequest.Reason, leaveRequest.StartDate, leaveRequest.EndDate);
 
-            await _leaveRequestRepository.UpdateAsync(leave_request);
+            var leave_request_dto = await this.BuildLeaveRequestDTO(@leave_request);
+
+            await _leaveRequestRepository.UpdateAsync(@leave_request);
             await CurrentUnitOfWork.SaveChangesAsync();
 
             return leave_request_dto;
@@ -208,26 +209,16 @@ namespace LeaveDayAPI.LeaveRequests
         [Authorize(LeaveDayAPIPermissions.ApprovePermission)]
         public async Task<bool> MultipleApproveAsync(List<ApproveLeaveRequestDto> request_list)
         {
-            if(request_list == null)
+            if (request_list == null)
             {
                 throw new UserFriendlyException(L["LeaveReques:InvalidRequest"]);
             }
 
-            bool Is_Failure = false;
-
-            foreach(var request in  request_list)
+            foreach (var request in request_list)
             {
-                
-                if(request.ApproveStatus == ApproveStatus.IsApproved)
-                {
-                    Is_Failure = await this.ApproveAsync(request.Id);
-                }
-                else
-                {
-                    Is_Failure = await this.RejectAsync(request.Id);
-                }
+                var approve_reject_result = await this.ApproveOrRejectAsync(request);
 
-                if(Is_Failure)
+                if (!approve_reject_result)
                 {
                     throw new UserFriendlyException("Internal Error, please try again");
                 }
@@ -236,74 +227,36 @@ namespace LeaveDayAPI.LeaveRequests
             return true;
         }
 
-        #region private method
-
-        private async Task<bool> ApproveAsync(Guid id)
+        public async Task<int> GetRemainingDayNumberAsync(Guid userId)
         {
-            var leave_request = await _leaveRequestRepository.GetAsync(id);
-
-            if (leave_request == null)
-            {
-                throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
-            }
-
-            if (leave_request.ApproveStatus == ApproveStatus.IsRejected)
-            {
-                throw new UserFriendlyException(L["LeaveRequest:ApproveError"]);
-            }
-
-            leave_request.ApproveStatus = ApproveStatus.IsApproved;
-
-            var request_days_number = leave_request.EndDate.Subtract(leave_request.StartDate).Days + 1;
-            var user_remaining_day = await _leaveDayRepository.SingleOrDefaultAsync(x => x.UserId == leave_request.UserId);
-
-            if (user_remaining_day == null)
-            {
-                throw new UserFriendlyException(L["User:NotFound"]);
-            }
-            user_remaining_day.RemainingDayNumber -= request_days_number;
-            await _leaveDayRepository.UpdateAsync(user_remaining_day);
-
-            await _leaveRequestRepository.UpdateAsync(leave_request);
-            await CurrentUnitOfWork.SaveChangesAsync();
-
-            var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
-            var request_user = await _userRepository.GetAsync(leave_request.UserId);
-
-            leave_request_dto.Surname = request_user.Surname;
-            leave_request_dto.Email = request_user.Email;
-
-            return leave_request_dto != null;
+            return await this._leaveDayManager.GetRemainingDayNumberAsync(userId);
         }
 
-        private async Task<bool> RejectAsync(Guid id)
+        public async Task<LeaveRequestDto> ViewRequestDetail(Guid request_id)
         {
-            var leave_request = await _leaveRequestRepository.GetAsync(id);
+            var leave_request = await this._leaveRequestRepository.GetAsync(request_id);
 
-            if (leave_request == null)
+            if(leave_request == null)
             {
                 throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
             }
 
-            if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
-            {
-                throw new UserFriendlyException(L["LeaveRequest:ApproveError"]);
-            }
+            return await this.BuildLeaveRequestDTO(leave_request);
+        }
 
-            leave_request.ApproveStatus = ApproveStatus.IsRejected;
+        #region private method
 
-            await _leaveRequestRepository.UpdateAsync(leave_request);
-
+        private async Task<LeaveRequestDto> BuildLeaveRequestDTO(LeaveRequest leave_request)
+        {
             var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
             var request_user = await _userRepository.GetAsync(leave_request.UserId);
 
             leave_request_dto.Surname = request_user.Surname;
             leave_request_dto.Email = request_user.Email;
 
-            return leave_request_dto != null ;
+            return leave_request_dto;
         }
 
         #endregion
-
     }
 }

@@ -6,6 +6,7 @@ namespace LeaveDayAPI.LeaveRequests
 {
     public static class LeaveRequestConsts
     {
-        public const int MaxTitleLength = 128;
+        public const int MaxTitleLength = 30;
+        public const int MaxReasonLength = 128;
     }
 }
