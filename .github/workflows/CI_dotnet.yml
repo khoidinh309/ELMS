@@ -8,7 +8,7 @@ jobs:
     runs-on: self-hosted
     strategy:
       matrix:
-        dotnet-version: ['6.x']
+        dotnet-version: ['5.0.x']
 
     steps:
     - name: Checkout repository
