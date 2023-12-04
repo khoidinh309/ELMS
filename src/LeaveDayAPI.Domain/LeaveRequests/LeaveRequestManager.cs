@@ -12,7 +12,7 @@ using Volo.Abp.Users;
 
 namespace LeaveDayAPI.LeaveRequests
 {
-    public class LeaveRequestManager : DomainService
+    public class LeaveRequestManager : DomainService, ILeaveRequestManager
     {
         private readonly IRepository<LeaveRequest, Guid> _leaveRequestRepository;
         private readonly ILeaveDayManager _leaveDayManager;
