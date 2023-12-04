@@ -9,6 +9,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\src\LeaveDayAPI.Domain\LeaveDayAPI.Domain.csproj" />
     <ProjectReference Include="..\LeaveDayAPI.EntityFrameworkCore.Tests\LeaveDayAPI.EntityFrameworkCore.Tests.csproj" />
   </ItemGroup>
 

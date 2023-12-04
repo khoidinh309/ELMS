@@ -16,5 +16,6 @@ namespace LeaveDayAPI.LeaveRequests
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public ApproveStatus ApproveStatus { get; set; }
+
     }
 }

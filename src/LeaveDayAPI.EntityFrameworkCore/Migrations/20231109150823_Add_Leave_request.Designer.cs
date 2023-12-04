@@ -4,6 +4,7 @@ using LeaveDayAPI.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Volo.Abp.EntityFrameworkCore;
 
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace LeaveDayAPI.Migrations
 {
     [DbContext(typeof(LeaveDayAPIDbContext))]
-    partial class LeaveDayAPIDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231109150823_Add_Leave_request")]
+    partial class AddLeaverequest
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -23,20 +26,6 @@ namespace LeaveDayAPI.Migrations
                 .HasAnnotation("Relational:MaxIdentifierLength", 128);
 
             SqlServerModelBuilderExtensions.UseIdentityColumns(modelBuilder);
-
-            modelBuilder.Entity("LeaveDayAPI.LeaveRequests.LeaveDay", b =>
-                {
-                    b.Property<Guid>("UserId")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uniqueidentifier");
-
-                    b.Property<int>("RemainingDayNumber")
-                        .HasColumnType("int");
-
-                    b.HasKey("UserId");
-
-                    b.ToTable("LeaveDays", (string)null);
-                });
 
             modelBuilder.Entity("LeaveDayAPI.LeaveRequests.LeaveRequest", b =>
                 {

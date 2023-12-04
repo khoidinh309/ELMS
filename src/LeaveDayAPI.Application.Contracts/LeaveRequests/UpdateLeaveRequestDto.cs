@@ -15,6 +15,7 @@ namespace LeaveDayAPI.LeaveRequests
         public string Title { get; set; }
 
         [Required]
+        [MaxLength(LeaveRequestConsts.MaxReasonLength)]
         public string Reason { get; set; }
 
         [Required]

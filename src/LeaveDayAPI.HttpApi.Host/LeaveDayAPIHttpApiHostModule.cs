@@ -28,7 +28,6 @@ using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.UI.Navigation.Urls;
 using Volo.Abp.VirtualFileSystem;
-
 namespace LeaveDayAPI;
 
 [DependsOn(
@@ -57,6 +56,7 @@ public class LeaveDayAPIHttpApiHostModule : AbpModule
         });
     }
 
+
     public override void ConfigureServices(ServiceConfigurationContext context)
     {
         var configuration = context.Services.GetConfiguration();
@@ -69,6 +69,7 @@ public class LeaveDayAPIHttpApiHostModule : AbpModule
         ConfigureVirtualFileSystem(context);
         ConfigureCors(context, configuration);
         ConfigureSwaggerServices(context, configuration);
+
     }
 
     private void ConfigureAuthentication(ServiceConfigurationContext context)
