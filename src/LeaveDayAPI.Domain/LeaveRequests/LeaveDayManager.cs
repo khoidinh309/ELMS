@@ -101,7 +101,7 @@ namespace LeaveDayAPI.LeaveRequests
 
         }
 
-        private int CalculateDayNumber(DateTime startDate,  DateTime endDate)
+        public int CalculateDayNumber(DateTime startDate,  DateTime endDate)
         {
             return endDate.Subtract(startDate).Days + 1;
         }
