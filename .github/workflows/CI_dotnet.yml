@@ -6,18 +6,18 @@ on:
 jobs:
   build:
     runs-on: self-hosted
+    strategy:
+      matrix:
+        dotnet-version: [ '5.0.x', '7.0.x' ]
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v2
 
-    - name: Set up .NET Core
-      uses: actions/setup-dotnet@v2
+    - name: Setup dotnet ${{ matrix.dotnet-version }}
+      uses: actions/setup-dotnet@v3
       with:
-        dotnet-version: '7.0.x'
-   
-    - name: Add nuget.org as nuget package source
-      run: dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org
+        dotnet-version: ${{ matrix.dotnet-version }}
 
     - name: Restore dependencies
       run: dotnet restore
@@ -38,3 +38,10 @@ jobs:
       with:
         name: published-app
         path: ${{ github.workspace }}/publish
+
+    - name: Upload Test Results
+      if: ${{ always() }}
+      uses: actions/upload-artifact@v2
+      with:
+        name: test-results
+        path: '**/*.trx'
