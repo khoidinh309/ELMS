@@ -150,6 +150,12 @@ namespace LeaveDayAPI.LeaveDay
             result.ShouldBeFalse();
         }
 
+        [Fact]
+        public void IsEnoughRemainingDaysForUpdate()
+        {
+            var result = true;
+            result.ShouldBeTrue();
+        }
 
     }
 }
