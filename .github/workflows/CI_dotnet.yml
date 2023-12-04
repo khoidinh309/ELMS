@@ -20,7 +20,7 @@ jobs:
         path: |
           ~/.nuget/packages
           **/*.sln
-        key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }
+        key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
             nuget-${{ runner.os }}-
     
