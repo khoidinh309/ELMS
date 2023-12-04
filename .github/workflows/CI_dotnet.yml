@@ -16,7 +16,10 @@ jobs:
     - name: Set up .NET Core
       uses: actions/setup-dotnet@v5
       with:
-        dotnet-version: 7.0.400
+        dotnet-version: '5.0.x'
+   
+    - name: Add nuget.org as nuget package source
+      run: dotnet nuget add source https://api.nuget.org/v3/index.json --name nuget.org
 
     - name: Restore dependencies
       run: dotnet restore
