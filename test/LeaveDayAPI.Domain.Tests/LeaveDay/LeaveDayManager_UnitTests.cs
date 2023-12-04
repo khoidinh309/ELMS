@@ -150,10 +150,41 @@ namespace LeaveDayAPI.LeaveDay
             result.ShouldBeFalse();
         }
 
-        [Fact]
-        public void IsEnoughRemainingDaysForUpdate()
+        [Theory]
+        [InlineData("2024-01-04", "2024-01-04")]
+        [InlineData("2024-01-04", "2024-01-06")]
+        [InlineData("2024-01-04", "2024-01-08")]
+        public async void IsEnoughRemainingDaysForUpdate_True(string start_date, string end_date)
         {
-            var result = true;
+            // Arrange
+            var userId = Guid.NewGuid();
+            var leave_request = new LeaveDayAPI.LeaveRequests.LeaveRequest
+            {
+                UserId = userId,
+                StartDate = DateTime.Now.AddDays(1),
+                EndDate = DateTime.Now.AddDays(3)
+            };
+            var leave_day_repository = Substitute.For<IRepository<LeaveDayAPI.LeaveRequests.LeaveDay>>();
+
+            leave_day_repository
+                .SingleOrDefaultAsync(Arg.Any<Expression<Func<LeaveDayAPI.LeaveRequests.LeaveDay, bool>>>())
+                .Returns(c =>
+                {
+                    var predicate = c.Arg<Expression<Func<LeaveDayAPI.LeaveRequests.LeaveDay, bool>>>();
+                    var leaveDay = new LeaveDayAPI.LeaveRequests.LeaveDay
+                    {
+                        UserId = userId,
+                        RemainingDayNumber = 2
+                    };
+                    return Task.FromResult(predicate.Compile()(leaveDay) ? leaveDay : null);
+                });
+
+            var leave_request_manager = new LeaveDayManager(leave_day_repository);
+
+            // Act
+            var result = await leave_request_manager.IsEnoughRemainingDaysForUpdate(leave_request, DateTime.Parse(start_date), DateTime.Parse(end_date), userId);
+
+            // Assert
             result.ShouldBeTrue();
         }
 
