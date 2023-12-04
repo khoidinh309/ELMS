@@ -14,6 +14,17 @@ jobs:
     - name: Checkout repository
       uses: actions/checkout@v2
 
+    - name: Cache NuGet packages
+      uses: actions/cache@v2
+      with:
+        path: |
+          ~/.nuget/packages
+          **/*.sln
+        key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }
+        restore-keys: |
+            nuget-${{ runner.os }}-
+    
+
     - name: Setup dotnet ${{ matrix.dotnet-version }}
       uses: actions/setup-dotnet@v4.0.0
       with:
