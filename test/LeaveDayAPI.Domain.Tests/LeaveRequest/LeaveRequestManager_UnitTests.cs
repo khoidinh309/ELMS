@@ -152,6 +152,7 @@ namespace LeaveDayAPI.LeaveRequest
             var leaveRequestRepository = Substitute.For<IRepository<LeaveDayAPI.LeaveRequests.LeaveRequest, Guid>>();
             leaveRequestRepository.GetAsync(leaveRequestId).Returns(new LeaveDayAPI.LeaveRequests.LeaveRequest { ApproveStatus = ApproveStatus.IsRequested });
             var leaveDayManager = Substitute.For<ILeaveDayManager>();
+            leaveDayManager.Return_Days(Arg.Any<LeaveDayAPI.LeaveRequests.LeaveRequest>()).Returns(Task.FromResult(true));
             var leaveRequestManager = new LeaveRequestManager(leaveRequestRepository, leaveDayManager);
 
             // Act

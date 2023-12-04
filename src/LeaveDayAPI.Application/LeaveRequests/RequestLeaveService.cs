@@ -26,7 +26,7 @@ namespace LeaveDayAPI.LeaveRequests
     public class LeaveRequestService : LeaveDayAPIAppService, ILeaveRequestService
     {
         private readonly ILeaveDayManager _leaveDayManager;
-        private readonly LeaveRequestManager _leaveRequestManager;
+        private readonly ILeaveRequestManager _leaveRequestManager;
         private readonly IRepository<LeaveRequest, Guid> _leaveRequestRepository;
         private readonly IRepository<IdentityUser, Guid> _userRepository;
         private readonly IStoreProcedureProviderService _storeProcedureProvider;
@@ -37,7 +37,7 @@ namespace LeaveDayAPI.LeaveRequests
                                     ,IRepository<LeaveDay> leaveDayRepository
                                     , IStoreProcedureProviderService storeProcedureProvide
                                     , ILeaveDayManager leaveDayManager
-                                    , LeaveRequestManager leaveRequestManager
+                                    , ILeaveRequestManager leaveRequestManager
         )
         {
             this._leaveRequestRepository = leaveRequestRepository;
