@@ -15,15 +15,12 @@ namespace LeaveDayAPI.LeaveRequests
     public class LeaveRequestManager : DomainService
     {
         private readonly IRepository<LeaveRequest, Guid> _leaveRequestRepository;
-        private readonly IRepository<IdentityUser, Guid> _userRepository;
-        private readonly LeaveDayManager _leaveDayManager;
+        private readonly ILeaveDayManager _leaveDayManager;
 
         public LeaveRequestManager(IRepository<LeaveRequest, Guid> leaveRequestRepository
-            , IRepository<IdentityUser, Guid> userRepository
-            , LeaveDayManager leaveDayManager)
+            , ILeaveDayManager leaveDayManager)
         {
             this._leaveRequestRepository = leaveRequestRepository;
-            this._userRepository = userRepository;
             this._leaveDayManager = leaveDayManager;
         }
 
@@ -62,13 +59,6 @@ namespace LeaveDayAPI.LeaveRequests
 
             leave_request.ApproveStatus = ApproveStatus.IsApproved;
 
-            var request_days_number = leave_request.EndDate.Subtract(leave_request.StartDate).Days + 1;
-
-            if (await _leaveDayManager.UpdateRemainingDay(leave_request.UserId, request_days_number) == false)
-            {
-                return false;
-            }
-
             await _leaveRequestRepository.UpdateAsync(leave_request);
 
             return true;
@@ -84,6 +74,11 @@ namespace LeaveDayAPI.LeaveRequests
             }
 
             if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
+            {
+                return false;
+            }
+
+            if(await this._leaveDayManager.Return_Days(leave_request) == false)
             {
                 return false;
             }

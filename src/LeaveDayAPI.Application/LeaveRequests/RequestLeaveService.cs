@@ -25,7 +25,7 @@ namespace LeaveDayAPI.LeaveRequests
     [Authorize]
     public class LeaveRequestService : LeaveDayAPIAppService, ILeaveRequestService
     {
-        private readonly LeaveDayManager _leaveDayManager;
+        private readonly ILeaveDayManager _leaveDayManager;
         private readonly LeaveRequestManager _leaveRequestManager;
         private readonly IRepository<LeaveRequest, Guid> _leaveRequestRepository;
         private readonly IRepository<IdentityUser, Guid> _userRepository;
@@ -36,7 +36,7 @@ namespace LeaveDayAPI.LeaveRequests
                                     ,IRepository<IdentityUser, Guid> userRepository
                                     ,IRepository<LeaveDay> leaveDayRepository
                                     , IStoreProcedureProviderService storeProcedureProvide
-                                    , LeaveDayManager leaveDayManager
+                                    , ILeaveDayManager leaveDayManager
                                     , LeaveRequestManager leaveRequestManager
         )
         {
@@ -105,11 +105,13 @@ namespace LeaveDayAPI.LeaveRequests
                     Reason = leaveRequest.Reason,
                     StartDate = leaveRequest.StartDate,
                     EndDate = leaveRequest.EndDate,
-                    UserId = (Guid)CurrentUser.Id,
+                    UserId = userId,
                     ApproveStatus = ApproveStatus.IsRequested
                 };
 
                 await _leaveRequestRepository.InsertAsync(leave_request);
+                var number_of_days = leaveRequest.EndDate.Subtract(leaveRequest.StartDate).Days + 1;
+                await _leaveDayManager.UpdateRemainingDay(userId, number_of_days);
                 await CurrentUnitOfWork.SaveChangesAsync();
 
                 var leave_request_dto = ObjectMapper.Map<LeaveRequest, LeaveRequestDto>(leave_request);
@@ -130,9 +132,22 @@ namespace LeaveDayAPI.LeaveRequests
         {
             var leave_request = await _leaveRequestRepository.GetAsync(Id);
 
-            if(leave_request == null)
+            if (leave_request == null)
             {
                 throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
+            }
+
+            if (leave_request.ApproveStatus == ApproveStatus.IsApproved)
+            {
+                throw new UserFriendlyException("Can not delete a approved request");
+            }
+
+            if (leave_request.ApproveStatus == ApproveStatus.IsRequested) 
+            { 
+                if (await _leaveDayManager.Return_Days(leave_request) == false)
+                {
+                    throw new UserFriendlyException("Internal Error, Sorry");
+                }
             }
 
             await _leaveRequestRepository.DeleteAsync(Id);
@@ -189,18 +204,20 @@ namespace LeaveDayAPI.LeaveRequests
 
             var userId = (Guid)CurrentUser.Id;
 
-            if (await this._leaveDayManager.IsEnoughRemainingDays(leaveRequest.StartDate, leaveRequest.EndDate, userId) == false)
+            if (await this._leaveDayManager.IsEnoughRemainingDaysForUpdate(@leave_request, leaveRequest.StartDate, leaveRequest.EndDate, userId) == false)
             {
                 var user_remaining_days_number = await this._leaveDayManager.GetRemainingDayNumberAsync(userId);
                 throw new UserFriendlyException(L["LeaveRequest:NotEnoughRemainingDay", user_remaining_days_number]);
             }
 
-            this._leaveRequestManager.UpdateAsync(@leave_request, leaveRequest.Title, 
+            var number_of_day = leaveRequest.EndDate.Subtract(leaveRequest.StartDate).Days + 1;
+            await _leaveDayManager.UpdateRemainingDayForUpdate(@leave_request, number_of_day);
+
+            this._leaveRequestManager.UpdateAsync(@leave_request, leaveRequest.Title,
                     leaveRequest.Reason, leaveRequest.StartDate, leaveRequest.EndDate);
-
             var leave_request_dto = await this.BuildLeaveRequestDTO(@leave_request);
-
             await _leaveRequestRepository.UpdateAsync(@leave_request);
+            
             await CurrentUnitOfWork.SaveChangesAsync();
 
             return leave_request_dto;
