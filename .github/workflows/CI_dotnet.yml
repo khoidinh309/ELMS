@@ -41,7 +41,7 @@ jobs:
 
     - name: Publish Artifact
       if: success()
-      run: dotnet publish -c Release -o ${{ github.workspace }}/publish
+      run: dotnet publish -c Release -o ${{ github.workspace }}/publish -f net7.0
 
     - name: Upload Artifact
       if: success()
