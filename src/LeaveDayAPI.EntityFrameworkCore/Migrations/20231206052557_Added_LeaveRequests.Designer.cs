@@ -4,6 +4,7 @@ using LeaveDayAPI.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Volo.Abp.EntityFrameworkCore;
 
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace LeaveDayAPI.Migrations
 {
     [DbContext(typeof(LeaveDayAPIDbContext))]
-    partial class LeaveDayAPIDbContextModelSnapshot : ModelSnapshot
+    [Migration("20231206052557_Added_LeaveRequests")]
+    partial class AddedLeaveRequests
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
