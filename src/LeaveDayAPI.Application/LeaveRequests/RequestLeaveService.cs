@@ -61,7 +61,7 @@ namespace LeaveDayAPI.LeaveRequests
                 var approve_result =  await this._leaveRequestManager.ApproveAsync(request.Id);
                 if(!approve_result)
                 {
-                    throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
+                    throw new UserFriendlyException("Request is not valid");
                 }
                 return approve_result;
             }
@@ -70,7 +70,7 @@ namespace LeaveDayAPI.LeaveRequests
                 var reject_result = await this._leaveRequestManager.RejectAsync(request.Id);
                 if(!reject_result)
                 {
-                    throw new UserFriendlyException(L["LeaveRequest:NotFound"]);
+                    throw new UserFriendlyException("Request is not valid");
                 }
                 return reject_result;
             }

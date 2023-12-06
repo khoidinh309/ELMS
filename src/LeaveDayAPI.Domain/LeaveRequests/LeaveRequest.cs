@@ -17,5 +17,25 @@ namespace LeaveDayAPI.LeaveRequests
         public DateTime EndDate { get; set; }
         public ApproveStatus ApproveStatus { get; set; }
 
+        public LeaveRequest()
+        {
+            
+        }
+
+        public LeaveRequest(Guid id, string title, string reason, 
+            DateTime startDate, 
+            DateTime endDate,
+            ApproveStatus approveStatus,
+            Guid userId
+        ) : base(id)
+        {
+            this.Title = title;
+            this.Reason = reason;
+            this.StartDate = startDate;
+            this.EndDate = endDate;
+            this.ApproveStatus = approveStatus;
+            this.UserId = userId;
+        }
+
     }
 }
