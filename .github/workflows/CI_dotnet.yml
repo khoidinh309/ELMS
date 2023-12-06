@@ -57,6 +57,11 @@ jobs:
         name: test-results
         path: '**/*.trx'
 
+name: CD
+
+on:
+  workflow_dispatch:
+
 jobs:
   deploy:
     runs-on: self-hosted
