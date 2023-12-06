@@ -28,6 +28,10 @@ using Volo.Abp.Modularity;
 using Volo.Abp.Swashbuckle;
 using Volo.Abp.UI.Navigation.Urls;
 using Volo.Abp.VirtualFileSystem;
+using System.Security.Cryptography.X509Certificates;
+using Microsoft.AspNetCore.Hosting;
+using Volo.Abp.OpenIddict;
+
 namespace LeaveDayAPI;
 
 [DependsOn(
@@ -54,6 +58,40 @@ public class LeaveDayAPIHttpApiHostModule : AbpModule
                 options.UseAspNetCore();
             });
         });
+
+        var hostingEnvironment = context.Services.GetHostingEnvironment();
+
+        // Development environment
+        if (hostingEnvironment.IsDevelopment())
+        {
+            PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+            {
+                // This is default value, you can remove this line.
+                options.AddDevelopmentEncryptionAndSigningCertificate = true;
+            });
+        }
+
+        // Production or Staging environment
+        if (!hostingEnvironment.IsDevelopment())
+        {
+            PreConfigure<AbpOpenIddictAspNetCoreOptions>(options =>
+            {
+                options.AddDevelopmentEncryptionAndSigningCertificate = false;
+            });
+
+            PreConfigure<OpenIddictServerBuilder>(builder =>
+            {
+                builder.AddSigningCertificate(GetSigningCertificate(hostingEnvironment));
+                builder.AddEncryptionCertificate(GetSigningCertificate(hostingEnvironment));
+
+                //...
+            });
+        }
+    }
+
+    private X509Certificate2 GetSigningCertificate(IWebHostEnvironment hostingEnv)
+    {
+        return new X509Certificate2(Path.Combine(hostingEnv.ContentRootPath, "authserver.pfx"), "00000000-0000-0000-0000-000000000000");
     }
 
 
