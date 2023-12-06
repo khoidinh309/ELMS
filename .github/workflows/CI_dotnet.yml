@@ -56,3 +56,26 @@ jobs:
       with:
         name: test-results
         path: '**/*.trx'
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: Download CI artifacts
+      uses: actions/download-artifact@v2
+      with:
+        name: published-app
+        path: ${{ github.workspace }}/published-app
+
+    - name: Deploy
+      run: |
+        # Gracefully recycle the IIS application pool
+        Stop-WebAppPool -Name "leave-day-services"
+        Start-Sleep -s 5  # Wait for a few seconds for the application pool to stop
+        
+        # Copy files to the deployment directory
+        robocopy ${{ github.workspace }}/published-app C:\inetpub\wwwroot\leave-day-services /E /MIR /NFL /NDL /NJH /NJS /nc /ns /np
+
+        # Restart the IIS application pool
+        Start-WebAppPool -Name "leave-day-services"
