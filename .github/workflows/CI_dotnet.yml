@@ -22,7 +22,7 @@ jobs:
           **/*.sln
         key: nuget-${{ runner.os }}-${{ hashFiles('**/*.csproj') }}
         restore-keys: |
-            nuget-${{ runner.os }}-
+          nuget-${{ runner.os }}-
     
 
     - name: Setup dotnet ${{ matrix.dotnet-version }}
@@ -57,10 +57,6 @@ jobs:
         name: test-results
         path: '**/*.trx'
 
-on:
-  workflow_dispatch:
-
-jobs:
   deploy:
     runs-on: self-hosted
 
